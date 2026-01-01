@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sangamsetu_db_prod
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-sangamsetu}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sangamsetu-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sangamsetu_backend_prod
+    command: sh -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 sangamsetu.wsgi:application"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_NAME=${DATABASE_NAME:-sangamsetu}
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - sangamsetu-network
+
+  frontend:
+    build:
+      context: ./sangamsetu-frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
+    container_name: sangamsetu_frontend_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - sangamsetu-network
+
+volumes:
+  postgres_data_prod:
+  static_volume:
+  media_volume:
+
+networks:
+  sangamsetu-network:
+    driver: bridge
+
