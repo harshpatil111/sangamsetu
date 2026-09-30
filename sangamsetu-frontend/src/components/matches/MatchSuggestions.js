@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { matchAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,11 +12,8 @@ const MatchSuggestions = () => {
   const [filter, setFilter] = useState('ALL');
   const [confirmingMatch, setConfirmingMatch] = useState(null);
 
-  useEffect(() => {
-    loadMatches();
-  }, [filter]);
-
-  const loadMatches = async () => {
+  // Memoize loadMatches with useCallback
+  const loadMatches = useCallback(async () => {
     try {
       setLoading(true);
       const data = await matchAPI.getMatches();
@@ -38,7 +35,12 @@ const MatchSuggestions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]); // Dependency array includes 'filter' because it is referenced inside
+
+  // Now include loadMatches in the useEffect dependency array safely
+  useEffect(() => {
+    loadMatches();
+  }, [loadMatches]);
 
   const handleConfirmMatch = async (matchId) => {
     if (!window.confirm('Are you sure you want to confirm this match?')) {
@@ -285,7 +287,7 @@ const MatchSuggestions = () => {
                     </div>
                   )}
 
-                  {/* Actions - Only for Police and Admin, and only for PENDING matches */}
+                  {/* Actions */}
                   {hasAnyRole(['POLICE', 'ADMIN']) && (match.status === 'PENDING' || !match.is_confirmed) && (
                     <div className="mt-6 flex justify-end space-x-4">
                       <button
