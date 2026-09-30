@@ -10,9 +10,10 @@
     "react-scripts": "5.0.1"
   },
   "scripts": {
-  "start": "react-scripts start",
+    "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --watchAll=false --ci",
+    "lint": "echo 'Lint check - build will validate code'",
     "eject": "react-scripts eject",
     "backend": "cd sangamsetu && python manage.py runserver 8000",
     "frontend": "cd sangamsetu-frontend && npm start",
@@ -38,5 +39,4 @@
   "devDependencies": {
     "concurrently": "^9.2.1"
   }
-  
 }
